@@ -21,17 +21,17 @@ import { Label } from "@/components/ui/label"
 import { TreeNode } from "@/types/tree"
 import { PlusCircle } from "lucide-react"
 
-export function DialogContainer({ item }: { item: TreeNode }) {
+export function DialogContainer({node}: {node: TreeNode}) {
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button  variant="ghost"   className="h-6 w-6 opacity-0 group-hover:opacity-100">
                     <PlusCircle className="h-4 w-4" />
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Add new item to {item.name}</DialogTitle>
+                    <DialogTitle>Add new item to {node.name}</DialogTitle>
                     <DialogDescription>
                         Add a new item to the selected node. Fill in the fields below and click "Save changes" to save.
                     </DialogDescription>
