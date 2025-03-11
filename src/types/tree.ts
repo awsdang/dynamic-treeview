@@ -3,7 +3,11 @@ export interface TreeNode {
     name: string;
     type: 'department' | 'section' | 'employee';
     childIds: string[];
+    hasChild?: boolean;
     details?: Details
+    createdAt?: string;
+    lastUpdated?: string;
+    Status: "active" | "inactive";
   }
 
   interface Details {
