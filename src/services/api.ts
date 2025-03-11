@@ -5,7 +5,7 @@ import type { TreeNode } from '../types/tree';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Configuration for data generation
-const NUM_DEPARTMENTS = 60; 
+const NUM_DEPARTMENTS = 20; 
 const MIN_SECTIONS_PER_DEPT = 5;
 const MAX_SECTIONS_PER_DEPT = 12;
 const SUBSECTION_PROBABILITY = 0.3;
@@ -55,9 +55,10 @@ const generateEmployees = (parentId: string, count: number): TreeNode[] => {
 };
 
 // Generate sections (some with subsections or employees)
-const generateSections = (parentId: string, count: number): TreeNode[] => {
+const generateSections = (parentId: string, count: number, depth: number = 0): TreeNode[] => {
   const sections = Array.from({ length: count }).map((_, index) => {
-    const hasSubsections = Math.random() < SUBSECTION_PROBABILITY;
+    const canHaveSubsections = depth < 3;
+    const hasSubsections = canHaveSubsections && (Math.random() < SUBSECTION_PROBABILITY);
     const section: TreeNode = {
       id: generateId(),
       name: `Section ${index + 1}`,
@@ -73,21 +74,16 @@ const generateSections = (parentId: string, count: number): TreeNode[] => {
     };
 
     if (hasSubsections) {
-      const subsections = generateSections(
-        section.id,
-        Math.floor(Math.random() * (MAX_SUBSECTIONS - MIN_SUBSECTIONS + 1)) + MIN_SUBSECTIONS
-      );
+      const subsectionCount = Math.floor(Math.random() * (MAX_SUBSECTIONS - MIN_SUBSECTIONS + 1)) + MIN_SUBSECTIONS;
+      const subsections = generateSections(section.id, subsectionCount, depth + 1);
       sectionsCache.set(section.id, subsections);
       section.details!.employeeCount = subsections.reduce(
         (sum, sub) => sum + (sub.details?.employeeCount || 0),
         0
       );
     } else {
-      const employees = generateEmployees(
-        section.id,
-        Math.floor(Math.random() * (MAX_EMPLOYEES_PER_SECTION - MIN_EMPLOYEES_PER_SECTION + 1)) +
-          MIN_EMPLOYEES_PER_SECTION
-      );
+      const employeesCount = Math.floor(Math.random() * (MAX_EMPLOYEES_PER_SECTION - MIN_EMPLOYEES_PER_SECTION + 1)) + MIN_EMPLOYEES_PER_SECTION;
+      const employees = generateEmployees(section.id, employeesCount);
       employeesCache.set(section.id, employees);
       section.details!.employeeCount = employees.length; // Sum of employees
     }
