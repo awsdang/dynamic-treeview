@@ -31,7 +31,7 @@ const sectionsCache: Map<string, TreeNode[]> = new Map(); // Parent ID -> Sectio
 const employeesCache: Map<string, TreeNode[]> = new Map(); // Parent ID -> Employees
 
 // Generate employees (leaf nodes)
-const generateEmployees = (parentId: string, count: number): TreeNode[] => {
+const generateEmployees = (parentId: string, parentName:string, count: number): TreeNode[] => {
   return Array.from({ length: count }).map((_, index) => ({
     id: generateId(),
     name: `Employee ${index + 1}`,
@@ -40,7 +40,7 @@ const generateEmployees = (parentId: string, count: number): TreeNode[] => {
     status: Math.random() < 0.5 ? 'active' : 'inactive',
     ...createMeta(),
     details: {
-      description: `Employee under section ${parentId}`,
+      description: `Employee under section ${parentId} | ${parentName}`,
       employeeCount: 1, // Each employee counts as 1
       head: {
         id: generateId(),
@@ -55,7 +55,7 @@ const generateEmployees = (parentId: string, count: number): TreeNode[] => {
 };
 
 // Generate sections (some with subsections or employees)
-const generateSections = (parentId: string, count: number, depth: number = 0): TreeNode[] => {
+const generateSections = (parentId: string, parentName:string, count: number, depth: number = 0): TreeNode[] => {
   const sections = Array.from({ length: count }).map((_, index) => {
     const canHaveSubsections = depth < 3;
     const hasSubsections = canHaveSubsections && (Math.random() < SUBSECTION_PROBABILITY);
@@ -68,14 +68,14 @@ const generateSections = (parentId: string, count: number, depth: number = 0): T
       hasChild: true, 
       ...createMeta(),
       details: {
-        description: `Section under department ${parentId}`,
+        description: `Section under department ${parentId} | ${parentName}`,
         employeeCount: 0, // Set later
       },
     };
 
     if (hasSubsections) {
       const subsectionCount = Math.floor(Math.random() * (MAX_SUBSECTIONS - MIN_SUBSECTIONS + 1)) + MIN_SUBSECTIONS;
-      const subsections = generateSections(section.id, subsectionCount, depth + 1);
+      const subsections = generateSections(section.id, section.name, subsectionCount, depth + 1);
       sectionsCache.set(section.id, subsections);
       section.details!.employeeCount = subsections.reduce(
         (sum, sub) => sum + (sub.details?.employeeCount || 0),
@@ -83,7 +83,7 @@ const generateSections = (parentId: string, count: number, depth: number = 0): T
       );
     } else {
       const employeesCount = Math.floor(Math.random() * (MAX_EMPLOYEES_PER_SECTION - MIN_EMPLOYEES_PER_SECTION + 1)) + MIN_EMPLOYEES_PER_SECTION;
-      const employees = generateEmployees(section.id, employeesCount);
+      const employees = generateEmployees(section.id, section.name, employeesCount);
       employeesCache.set(section.id, employees);
       section.details!.employeeCount = employees.length; // Sum of employees
     }
@@ -118,6 +118,7 @@ const generateDepartments = (count: number): TreeNode[] => {
 
     const sections = generateSections(
       department.id,
+      department.name,
       Math.floor(Math.random() * (MAX_SECTIONS_PER_DEPT - MIN_SECTIONS_PER_DEPT + 1)) + MIN_SECTIONS_PER_DEPT
     );
     sectionsCache.set(department.id, sections);
