@@ -1,25 +1,27 @@
 export interface TreeNode {
     id: string;
     name: string;
+    parentId?: string;
     type: 'department' | 'section' | 'employee';
-    childIds: string[];
+    childIds?: string[];
     hasChild?: boolean;
     details?: Details
     createdAt?: string;
     lastUpdated?: string;
-    Status: "active" | "inactive";
+    status: "active" | "inactive";
   }
 
   interface Details {
     description?: string;
     employeeCount?: number;
-    resource_link?: string[];
-    userNote: string;
+    resourceLinks?: string[];
+    userNote?: string;
     head?: HeadInfo;
     [key: string]: unknown
   }
 
  interface HeadInfo {
+    id:string;
     firstName: string;
     lastName: string;
     email: string;
