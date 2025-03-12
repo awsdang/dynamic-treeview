@@ -37,7 +37,6 @@ const generateEmployees = (parentId: string, parentName: string, count: number):
     type: "employee",
     hasChild: false,
     status: Math.random() < 0.5 ? "active" : "inactive",
-    parentId,
     ...createMeta(),
     details: {
       description: `Employee under section ${parentId} | ${parentName}`,
@@ -70,10 +69,9 @@ const generateSections = (
       type: "section",
       status: hasSubsections ? "active" : "inactive",
       hasChild: true,
-      parentId,
       ...createMeta(),
       details: {
-        description: `Section under ${parentId} | ${parentName}`,
+        description: `Section under department ${parentId} | ${parentName}`,
         employeeCount: 0,
       },
     };
@@ -200,7 +198,6 @@ export const api = {
       ...nodeData,
       id: newId,
       hasChild: nodeData.type === "employee" ? false : true,
-      parentId,
       ...createMeta(),
     };
 
@@ -268,110 +265,208 @@ export const api = {
     throw new Error(`Node with ID ${nodeId} not found`);
   },
 
-  async updateNode(nodeId: string, updates: Partial<TreeNode>): Promise<TreeNode> {
-    return api.editNode(nodeId, updates);
-  },
-
-  async moveNode(nodeId: string, newParentId: string | "root"): Promise<void> {
+  async moveNode(nodeId: string, newParentId: string): Promise<void> {
     initializeCache();
     await delay(400);
 
-    const oldParentId = findParentId(nodeId);
-    if (oldParentId === newParentId) return;
+    // Handle the root case
+    if (newParentId === "root") {
+      newParentId = "";
+    }
 
     let node: TreeNode | undefined;
-    let isEmployee = false;
+    let nodeType: string | undefined;
 
-    // Find the node in sections or employees
-    for (const sections of sectionsCache.values()) {
-      node = sections.find((s) => s.id === nodeId);
-      if (node) break;
+    // Find the node in departments
+    const deptIndex = departmentsCache.findIndex((d) => d.id === nodeId);
+    if (deptIndex >= 0) {
+      node = departmentsCache[deptIndex];
+      nodeType = "department";
     }
+
+    // Find the node in sections
     if (!node) {
-      for (const employees of employeesCache.values()) {
-        node = employees.find((e) => e.id === nodeId);
-        if (node) {
-          isEmployee = true;
+      for (const sections of sectionsCache.values()) {
+        const foundIdx = sections.findIndex((s) => s.id === nodeId);
+        if (foundIdx >= 0) {
+          node = sections[foundIdx];
+          nodeType = "section";
           break;
         }
       }
     }
+
+    // Find the node in employees
     if (!node) {
-      node = departmentsCache.find((d) => d.id === nodeId);
+      for (const employees of employeesCache.values()) {
+        const foundIdx = employees.findIndex((e) => e.id === nodeId);
+        if (foundIdx >= 0) {
+          node = employees[foundIdx];
+          nodeType = "employee";
+          break;
+        }
+      }
     }
-    if (!node) return;
+
+    if (!node || !nodeType) {
+      console.error(`Node with ID ${nodeId} not found for moving`);
+      return;
+    }
+
+    // Check if the move is valid
+    if (nodeType === "department" && newParentId !== "") {
+      console.error("Departments can only exist at the root level");
+      return;
+    }
+    
+    if (nodeType === "section" && newParentId) {
+      const destParent = departmentsCache.find((d) => d.id === newParentId);
+      if (!destParent) {
+        console.error("Sections can only be moved under departments");
+        return;
+      }
+    }
+    
+    if (nodeType === "employee" && newParentId) {
+      const allSections = Array.from(sectionsCache.values()).flat();
+      const destParent = allSections.find((s) => s.id === newParentId);
+      if (!destParent) {
+        console.error("Employees can only be moved under sections");
+        return;
+      }
+    }
+
+    // Find the old parent
+    const oldParentId = findParentId(nodeId);
+    if (oldParentId === newParentId) {
+      return; // Already in the correct parent, no need to move
+    }
 
     // Remove from old parent
     if (oldParentId) {
-      if (isEmployee) {
-        const oldEmployees = employeesCache.get(oldParentId)!;
-        employeesCache.set(oldParentId, oldEmployees.filter((e) => e.id !== nodeId));
-        const oldParent = Array.from(sectionsCache.values())
-          .flat()
-          .find((s) => s.id === oldParentId);
+      if (nodeType === "section") {
+        const oldParentSections = sectionsCache.get(oldParentId) || [];
+        sectionsCache.set(
+          oldParentId,
+          oldParentSections.filter((s) => s.id !== nodeId)
+        );
+        
+        const oldParent = departmentsCache.find((d) => d.id === oldParentId);
+        if (oldParent) {
+          oldParent.childIds = oldParent.childIds?.filter((id) => id !== nodeId) || [];
+          oldParent.details!.employeeCount = 
+            (oldParent.details!.employeeCount || 0) - (node.details?.employeeCount || 0);
+        }
+      } else if (nodeType === "employee") {
+        const oldParentEmployees = employeesCache.get(oldParentId) || [];
+        employeesCache.set(
+          oldParentId,
+          oldParentEmployees.filter((e) => e.id !== nodeId)
+        );
+        
+        // Find the section that was the old parent
+        const allSections = Array.from(sectionsCache.values()).flat();
+        const oldParent = allSections.find((s) => s.id === oldParentId);
         if (oldParent) {
           oldParent.childIds = oldParent.childIds?.filter((id) => id !== nodeId) || [];
           oldParent.details!.employeeCount = (oldParent.details!.employeeCount || 0) - 1;
         }
-      } else {
-        const oldSections = sectionsCache.get(oldParentId)!;
-        sectionsCache.set(oldParentId, oldSections.filter((s) => s.id !== nodeId));
-        const oldParent =
-          departmentsCache.find((d) => d.id === oldParentId) ||
-          Array.from(sectionsCache.values())
-            .flat()
-            .find((s) => s.id === oldParentId);
-        if (oldParent) {
-          oldParent.childIds = oldParent.childIds?.filter((id) => id !== nodeId) || [];
-          oldParent.details!.employeeCount =
-            (oldParent.details!.employeeCount || 0) - (node.details?.employeeCount || 0);
-        }
       }
-    } else {
+    } else if (nodeType === "department") {
+      // Remove department from root
       departmentsCache = departmentsCache.filter((d) => d.id !== nodeId);
     }
 
     // Add to new parent
-    if (newParentId === "root") {
-      node.parentId = undefined;
-      departmentsCache.push(node);
-    } else {
+    if (newParentId === "") {
+      // Add to root (department only)
+      if (nodeType === "department") {
+        departmentsCache.push(node);
+      }
+    } else if (nodeType === "section") {
+      // Add section to a department
+      const newParentSections = sectionsCache.get(newParentId) || [];
+      sectionsCache.set(newParentId, [...newParentSections, { ...node, parentId: newParentId }]);
+      
+      // Update department
+      const destParent = departmentsCache.find((d) => d.id === newParentId);
+      if (destParent) {
+        destParent.childIds = [...(destParent.childIds || []), nodeId];
+        destParent.details!.employeeCount = 
+          (destParent.details!.employeeCount || 0) + (node.details?.employeeCount || 0);
+      }
+      
+      // Update node's parentId
       node.parentId = newParentId;
-      if (isEmployee) {
-        const newEmployees = employeesCache.get(newParentId) || [];
-        employeesCache.set(newParentId, [...newEmployees, node]);
-        const newParent = Array.from(sectionsCache.values())
-          .flat()
-          .find((s) => s.id === newParentId);
-        if (newParent) {
-          newParent.childIds = [...(newParent.childIds || []), nodeId];
-          newParent.details!.employeeCount = (newParent.details!.employeeCount || 0) + 1;
-        }
-      } else {
-        const newSections = sectionsCache.get(newParentId) || [];
-        sectionsCache.set(newParentId, [...newSections, node]);
-        const newParent =
-          departmentsCache.find((d) => d.id === newParentId) ||
-          Array.from(sectionsCache.values())
-            .flat()
-            .find((s) => s.id === newParentId);
-        if (newParent) {
-          newParent.childIds = [...(newParent.childIds || []), nodeId];
-          newParent.details!.employeeCount =
-            (newParent.details!.employeeCount || 0) + (node.details?.employeeCount || 0);
+    } else if (nodeType === "employee") {
+      // Add employee to a section
+      const newParentEmployees = employeesCache.get(newParentId) || [];
+      employeesCache.set(newParentId, [...newParentEmployees, { ...node, parentId: newParentId }]);
+      
+      // Update section
+      const allSections = Array.from(sectionsCache.values()).flat();
+      const destParent = allSections.find((s) => s.id === newParentId);
+      if (destParent) {
+        destParent.childIds = [...(destParent.childIds || []), nodeId];
+        destParent.details!.employeeCount = (destParent.details!.employeeCount || 0) + 1;
+        
+        // Also update the department that contains this section
+        const deptId = findParentId(destParent.id);
+        if (deptId) {
+          const dept = departmentsCache.find(d => d.id === deptId);
+          if (dept) {
+            dept.details!.employeeCount = (dept.details!.employeeCount || 0) + 1;
+          }
         }
       }
+      
+      // Update node's parentId
+      node.parentId = newParentId;
     }
   },
 
   async getAllNodes(): Promise<TreeNode[]> {
     initializeCache();
-    await delay(100);
+    await delay(300);
     return [
       ...departmentsCache,
       ...Array.from(sectionsCache.values()).flat(),
       ...Array.from(employeesCache.values()).flat(),
     ];
+  },
+
+  async updateNode(nodeId: string, updates: Partial<TreeNode>): Promise<TreeNode> {
+    initializeCache();
+    await delay(400);
+    
+    // Find the node to update
+    let node: TreeNode | undefined;
+    const deptIndex = departmentsCache.findIndex((d) => d.id === nodeId);
+    if (deptIndex >= 0) {
+      node = departmentsCache[deptIndex];
+      departmentsCache[deptIndex] = { ...node, ...updates };
+      return departmentsCache[deptIndex];
+    }
+
+    for (const [parentId, sections] of sectionsCache.entries()) {
+      const sectionIndex = sections.findIndex((s) => s.id === nodeId);
+      if (sectionIndex >= 0) {
+        node = sections[sectionIndex];
+        sections[sectionIndex] = { ...node, ...updates };
+        return sections[sectionIndex];
+      }
+    }
+
+    for (const [parentId, employees] of employeesCache.entries()) {
+      const employeeIndex = employees.findIndex((e) => e.id === nodeId);
+      if (employeeIndex >= 0) {
+        node = employees[employeeIndex];
+        employees[employeeIndex] = { ...node, ...updates };
+        return employees[employeeIndex];
+      }
+    }
+
+    throw new Error(`Node with ID ${nodeId} not found`);
   },
 };
 

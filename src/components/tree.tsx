@@ -34,8 +34,10 @@ export function Tree({
   const [isEditDialogOpen, setEditDialog] = useState(false);
   const [isLoadingChildren, setIsLoadingChildren] = useState(false);
 
+  // Pass the index data for reordering purposes
   const { attributes, listeners, setNodeRef: setDraggableRef, transform } = useDraggable({
     id: node.id,
+    data: { index }
   });
 
   const { setNodeRef: setDroppableRef, isOver: isChildrenOver } = useDroppable({

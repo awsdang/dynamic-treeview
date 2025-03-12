@@ -89,7 +89,7 @@ function App() {
     }
     setExpandedNodes(newExpanded);
     setSelectedNode(node);
-    console.log(`Toggled ${node.id}, new expanded:`, Array.from(newExpanded));
+    console.log(`Toggled ${node.id, newExpanded}`);
   };
 
   const findParentId = (nodeId: string): string | null => {
@@ -116,101 +116,111 @@ function App() {
     const draggedNodeId = active.id as string;
     const destDroppableId = over.id as string;
 
-    const allNodes = await api.getAllNodes(); // Fetch all nodes for accuracy
+    // Get all nodes to properly validate moves
+    const allNodes = await api.getAllNodes();
     const draggedNode = allNodes.find((node) => node.id === draggedNodeId);
     if (!draggedNode) return;
 
     const sourceParentId = findParentId(draggedNodeId);
-    const destParentId =
-      destDroppableId === "root"
-        ? null
-        : destDroppableId.includes("-children")
-        ? destDroppableId.split("-children")[0]
-        : destDroppableId;
+    let destParentId: string | null = null;
+    
+    // Determine the destination parent ID
+    if (destDroppableId === "root") {
+      destParentId = null; // Root level
+    } else if (destDroppableId.includes("-children")) {
+      // Dropping into a parent's children container
+      destParentId = destDroppableId.split("-children")[0];
+    } else {
+      // If dropping onto another node, we need to determine if it's a sibling or potential parent
+      const destNode = allNodes.find(node => node.id === destDroppableId);
+      if (destNode) {
+        if (destNode.hasChild) {
+          // Dropping onto a parent-capable node (department or section)
+          destParentId = destNode.id;
+        } else {
+          // Dropping onto a sibling, so we share the same parent
+          destParentId = findParentId(destNode.id);
+        }
+      }
+    }
 
-    console.log(`Dragging ${draggedNodeId} (${draggedNode.type}) from ${sourceParentId} to ${destParentId}`);
+    // Validate move based on node types
+    let validMove = false;
+    if (draggedNode.type === "department") {
+      // Departments can only be at the root level
+      if (destParentId === null) validMove = true;
+    } else if (draggedNode.type === "section") {
+      // Sections must be under a department
+      if (destParentId !== null) {
+        const destParent = allNodes.find(node => node.id === destParentId);
+        if (destParent && destParent.type === "department") {
+          validMove = true;
+        }
+      }
+    } else if (draggedNode.type === "employee") {
+      // Employees must be under a section
+      if (destParentId !== null) {
+        const destParent = allNodes.find(node => node.id === destParentId);
+        if (destParent && destParent.type === "section") {
+          validMove = true;
+        }
+      }
+    }
 
+    if (!validMove) {
+      console.error("Invalid move:", draggedNode.type, "cannot be moved to", destParentId);
+      return;
+    }
+
+    console.log(`Moving ${draggedNode.name} (${draggedNode.type}) from ${sourceParentId} to ${destParentId || "root"}`);
+
+    // Handle reordering within the same parent
     if (sourceParentId === destParentId) {
-      // Reordering within the same parent
-      const siblings = sourceParentId
-        ? await api.fetchChildNodes(sourceParentId)
-        : tree.filter((node) => !findParentId(node.id));
-      const sourceIndex = siblings.findIndex((node) => node.id === draggedNodeId);
-      const destIndex = over.data.current?.index ?? siblings.length - 1;
-
-      if (sourceIndex === destIndex) return;
-
-      const reorderedSiblings = Array.from(siblings);
-      const [movedNode] = reorderedSiblings.splice(sourceIndex, 1);
-      reorderedSiblings.splice(destIndex, 0, movedNode);
-
-      if (sourceParentId) {
-        await api.updateNode(sourceParentId, {
-          childIds: reorderedSiblings.map((n) => n.id),
-        });
-        setTree((prev) =>
-          prev.map((node) =>
-            node.id === sourceParentId
-              ? { ...node, childIds: reorderedSiblings.map((n) => n.id) }
-              : node
-          )
-        );
+      // Reordering logic
+      let siblings;
+      if (sourceParentId === null) {
+        // Root level nodes (departments)
+        siblings = tree.filter(node => node.type === "department");
       } else {
+        // Children nodes
+        siblings = await api.fetchChildNodes(sourceParentId);
+      }
+
+      const sourceIndex = siblings.findIndex(node => node.id === draggedNodeId);
+      let destIndex = siblings.length - 1; // Default to end
+      
+      if (!destDroppableId.includes("-children")) {
+        // If dropping onto a specific node, insert at that position
+        destIndex = siblings.findIndex(node => node.id === destDroppableId);
+        if (destIndex === -1) {
+          destIndex = over.data.current?.index ?? siblings.length - 1;
+        }
+      }
+      
+      if (sourceIndex === destIndex) return; // No change needed
+      
+      const reorderedSiblings = [...siblings];
+      const [movedNode] = reorderedSiblings.splice(sourceIndex, 1);
+      reorderedSiblings.splice(destIndex > sourceIndex ? destIndex : destIndex + 1, 0, movedNode);
+      
+      if (sourceParentId === null) {
         setTree(reorderedSiblings);
+      } else {
+        await api.updateNode(sourceParentId, {
+          childIds: reorderedSiblings.map(n => n.id)
+        });
+        
+        // Refresh the tree to reflect changes
+        const rootNodes = await api.fetchRootNodes();
+        setTree(rootNodes);
       }
     } else {
       // Moving to a different parent
       await api.moveNode(draggedNodeId, destParentId || "root");
-
-      // Update the tree state
-      setTree((prev) => {
-        let updatedTree = prev.map((node) => {
-          if (node.id === sourceParentId) {
-            return {
-              ...node,
-              childIds: node.childIds?.filter((id) => id !== draggedNodeId) || [],
-            };
-          }
-          if (node.id === destParentId) {
-            return {
-              ...node,
-              childIds: [...(node.childIds || []), draggedNodeId],
-            };
-          }
-          return node;
-        });
-
-        if (!sourceParentId) {
-          updatedTree = updatedTree.filter((node) => node.id !== draggedNodeId);
-        }
-        if (!destParentId) {
-          updatedTree = [...updatedTree, { ...draggedNode, parentId: undefined }];
-        }
-
-        return updatedTree.filter((node) => !findParentId(node.id));
-      });
-
-      // Sync children for affected parents
-      if (sourceParentId) {
-        const sourceChildren = await api.fetchChildNodes(sourceParentId);
-        setTree((prev) =>
-          prev.map((node) =>
-            node.id === sourceParentId
-              ? { ...node, childIds: sourceChildren.map((n) => n.id) }
-              : node
-          )
-        );
-      }
-      if (destParentId) {
-        const destChildren = await api.fetchChildNodes(destParentId);
-        setTree((prev) =>
-          prev.map((node) =>
-            node.id === destParentId
-              ? { ...node, childIds: destChildren.map((n) => n.id) }
-              : node
-          )
-        );
-      }
+      
+      // Refresh the tree to show the updated structure
+      const rootNodes = await api.fetchRootNodes();
+      setTree(rootNodes);
     }
   };
 
