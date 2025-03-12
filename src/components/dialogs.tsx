@@ -7,12 +7,12 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-  import {
+import {
     useForm
-  } from "react-hook-form"
-  import {
+} from "react-hook-form"
+import {
     zodResolver
-  } from "@hookform/resolvers/zod"
+} from "@hookform/resolvers/zod"
 import { Input } from "@/components/ui/input"
 import { TreeNode } from "@/types/tree"
 import { PencilLine, PlusCircle } from "lucide-react"
@@ -35,13 +35,16 @@ const editFormSchema = z.object({
 
 
 
-export function AddDialog({ node, isOpen, setIsOpen, onAdd }: { node: TreeNode,isOpen:boolean,setIsOpen:(value:boolean)=>void, onAdd: (newNode: TreeNode) => void }) { 
-
-    const form = useForm < z.infer < typeof addFormSchema >> ({
+export function AddDialog({ node, isOpen, setIsOpen, onAdd }: { node: TreeNode, isOpen: boolean, setIsOpen: (value: boolean) => void, onAdd: (newNode: TreeNode) => void }) {
+    const form = useForm<z.infer<typeof addFormSchema>>({
         resolver: zodResolver(addFormSchema),
-      })
-    
-      async function onSubmit(values: z.infer < typeof addFormSchema > ) {
+        defaultValues: {
+            name: "",
+            description: "",
+        },
+    });
+
+    async function onSubmit(values: z.infer<typeof addFormSchema>) {
         const newNode = await api.addNode(node.id, {
             name: values.name,
             type: node.type === 'department' ? 'section' : 'employee',
@@ -52,12 +55,12 @@ export function AddDialog({ node, isOpen, setIsOpen, onAdd }: { node: TreeNode,i
         })
         onAdd(newNode)
         setIsOpen(false)
-      }
+    }
 
 
-    
+
     return (
-        <Dialog open={isOpen} onOpenChange={()=>{setIsOpen(!isOpen); form.reset()}}>
+        <Dialog open={isOpen} onOpenChange={() => { setIsOpen(!isOpen); form.reset() }}>
             <DialogTrigger asChild>
                 <Button variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100">
                     <PlusCircle className="h-4 w-4" />
@@ -71,71 +74,69 @@ export function AddDialog({ node, isOpen, setIsOpen, onAdd }: { node: TreeNode,i
                     </DialogDescription>
                 </DialogHeader>
                 <div className="w-full">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-3xl mx-auto py-10">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Name</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="Enter Node Name Here"
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-3xl mx-auto py-10">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Name</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter Node Name Here"
 
-                                            type=""
-                                            {...field} />
-                                    </FormControl>
+                                                type=""
+                                                {...field} />
+                                        </FormControl>
 
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                        <Textarea
-                                            placeholder="Enter Description Here"
-                                            className="resize-none"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <Button type="submit" className='w-full'>Add</Button>
-                    </form>
-                </Form>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="Enter Description Here"
+                                                className="resize-none"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit" className='w-full'>Add</Button>
+                        </form>
+                    </Form>
                 </div>
             </DialogContent>
         </Dialog>
     )
 }
 
-export function EditDialog({ node, isOpen, setIsOpen, onEdit }: { node: TreeNode,isOpen:boolean,setIsOpen:(value:boolean)=>void, onEdit: (updatedNode: TreeNode) => void }) {
-
-    const form = useForm < z.infer < typeof editFormSchema >> ({
+export function EditDialog({ node, isOpen, setIsOpen, onEdit }: { node: TreeNode, isOpen: boolean, setIsOpen: (value: boolean) => void, onEdit: (updatedNode: TreeNode) => void }) {
+    const form = useForm<z.infer<typeof editFormSchema>>({
         resolver: zodResolver(editFormSchema),
-      })
-
-    const [prevNodeId, setPrevNodeId] = useState<string | null>(null)
+        defaultValues: {
+            name: node.name,
+            description: node.details?.description || "",
+        },
+    });
 
     useEffect(() => {
-        if (isOpen && node.id !== prevNodeId) {
-            form.reset({
-                name: node.name,
-                description: node.details?.description || ""
-            });
-            setPrevNodeId(node.id);
-        }
-    }, [isOpen, node, form, prevNodeId]);
-    
-      async function onSubmit(values: z.infer < typeof editFormSchema > ) {
+        form.reset({
+            name: node.name,
+            description: node.details?.description || "",
+        });
+    }, [node, form]);
+
+    async function onSubmit(values: z.infer<typeof editFormSchema>) {
         const updatedNode = await api.editNode(node.id, {
             name: values.name,
             status: 'active',
@@ -145,10 +146,10 @@ export function EditDialog({ node, isOpen, setIsOpen, onEdit }: { node: TreeNode
         })
         setIsOpen(false)
         onEdit(updatedNode)
-      }
-    
+    }
+
     return (
-        <Dialog open={isOpen} onOpenChange={()=>{setIsOpen(!isOpen); form.reset()}}>
+        <Dialog open={isOpen} onOpenChange={() => { setIsOpen(!isOpen); form.reset() }}>
             <DialogTrigger asChild>
                 <Button variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100">
                     <PencilLine className="h-4 w-4" />
@@ -162,45 +163,45 @@ export function EditDialog({ node, isOpen, setIsOpen, onEdit }: { node: TreeNode
                     </DialogDescription>
                 </DialogHeader>
                 <div className="w-full">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-3xl mx-auto py-10">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Name</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            placeholder="Enter Node Name Here"
-                                            type=""
-                                            {...field} />
-                                    </FormControl>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-3xl mx-auto py-10">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Name</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter Node Name Here"
+                                                type=""
+                                                {...field} />
+                                        </FormControl>
 
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                        <Textarea
-                                            placeholder="Enter Description Here"
-                                            className="resize-none"
-                                            {...field}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <Button type="submit" className='w-full'>Save changes</Button>
-                    </form>
-                </Form>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                placeholder="Enter Description Here"
+                                                className="resize-none"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="submit" className='w-full'>Save changes</Button>
+                        </form>
+                    </Form>
                 </div>
             </DialogContent>
         </Dialog>
