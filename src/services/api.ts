@@ -217,6 +217,44 @@ export const api = {
     return newNode;
   },
 
+  // Edit an existing node
+  async editNode(nodeId: string, updates: Partial<TreeNode>): Promise<TreeNode> {
+    initializeCache();
+    await delay(400);
+    
+    // Find the node to edit
+    let node: TreeNode | undefined;
+    // Check in departments
+    const deptIndex = departmentsCache.findIndex(d => d.id === nodeId);
+    if (deptIndex >= 0) {
+      node = departmentsCache[deptIndex];
+      departmentsCache[deptIndex] = { ...node, ...updates };
+      return departmentsCache[deptIndex];
+    }
+    
+    // Check in sections
+    for (const [parentId, sections] of sectionsCache.entries()) {
+      const sectionIndex = sections.findIndex(s => s.id === nodeId);
+      if (sectionIndex >= 0) {
+        node = sections[sectionIndex];
+        sections[sectionIndex] = { ...node, ...updates };
+        return sections[sectionIndex];
+      }
+    }
+    
+    // Check in employees
+    for (const [parentId, employees] of employeesCache.entries()) {
+      const employeeIndex = employees.findIndex(e => e.id === nodeId);
+      if (employeeIndex >= 0) {
+        node = employees[employeeIndex];
+        employees[employeeIndex] = { ...node, ...updates };
+        return employees[employeeIndex];
+      }
+    }
+    
+    throw new Error(`Node with ID ${nodeId} not found`);
+  },
+
   // Move a node to a new parent
   async moveNode(nodeId: string, newParentId: string): Promise<void> {
     initializeCache();

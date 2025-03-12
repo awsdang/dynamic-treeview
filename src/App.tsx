@@ -24,7 +24,7 @@ function App() {
   const [searchResults, setSearchResults] = useState<TreeNode[]>([])
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null)
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
-  
+
 
   const clearSearch = () => {
     setSearchQuery("")
@@ -32,6 +32,18 @@ function App() {
     setSelectedNode(null)
   }
 
+
+
+  const handleNodeUpdate = (updatedNode: TreeNode) => {
+    setTree(prevData => {
+        return prevData.map(node => {
+            if (node.id === updatedNode.id) {
+                return { ...updatedNode };
+            }
+            return node;
+        });
+    });
+};
 
 
   useEffect(() => {
@@ -108,20 +120,20 @@ function App() {
               <div className="flex items-center justify-center p-6 border-b">
                 <div className="relative w-full">
                   <div className="flex flex-row w-full gap-2">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    onChange={(e) => {setSearchQuery(e.target.value)} } 
-                    value={searchQuery}
-                    placeholder="Search departments and sections..."
-                    className="pl-8 focus:ring-none focus:border-none"
-                  />
-                  
-                  <Button onClick={async ()=>await performSearch()}>
-                    Search
-                  </Button>
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      onChange={(e) => { setSearchQuery(e.target.value) }}
+                      value={searchQuery}
+                      placeholder="Search departments and sections..."
+                      className="pl-8 focus:ring-none focus:border-none"
+                    />
 
-                  
+                    <Button onClick={async () => await performSearch()}>
+                      Search
+                    </Button>
+
+
                   </div>
                   {isSearching && (
                     <div className="flex items-center justify-between mt-2 text-sm text-muted-foreground">
@@ -133,22 +145,22 @@ function App() {
                   )}
                 </div>
               </div>
-              
-              {isSearching ? 
-               (searchResults && searchResults.length > 0 && searchResults.map((node) => (
-                <div>
-                <Tree key={node.id} expandedNodes={expandedNodes} level={0} onClick={handleClick} onToggle={toggleNode} node={node} isExpanded={expandedNodes.has(node.id)}/>
-                </div>
-              )))
-              :
-              (tree && tree.length > 0 && tree.map((node) => (
-                <div>
-                <Tree key={node.id} expandedNodes={expandedNodes} level={0} onClick={handleClick} onToggle={toggleNode} node={node} isExpanded={expandedNodes.has(node.id)}/>
-                </div>
-              )))
+
+              {isSearching ?
+                (searchResults && searchResults.length > 0 && searchResults.map((node) => (
+                  <div>
+                    <Tree key={node.id} expandedNodes={expandedNodes} level={0} onClick={handleClick} onToggle={toggleNode} node={node} isExpanded={expandedNodes.has(node.id)}  onNodeUpdate={handleNodeUpdate}/>
+                  </div>
+                )))
+                :
+                (tree && tree.length > 0 && tree.map((node) => (
+                  <div>
+                    <Tree key={node.id} expandedNodes={expandedNodes} level={0} onClick={handleClick} onToggle={toggleNode} node={node} isExpanded={expandedNodes.has(node.id)} onNodeUpdate={handleNodeUpdate}/>
+                  </div>
+                )))
               }
-             
-              
+
+
             </ResizablePanel>
             <ResizableHandle withHandle className="bg-black" />
             <ResizablePanel defaultSize={40}>

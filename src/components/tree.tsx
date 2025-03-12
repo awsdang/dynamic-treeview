@@ -1,9 +1,9 @@
 import { ChevronDown, ChevronRight, Dock, Folder, User } from "lucide-react"
-import { DialogContainer } from "@/components/newNodeDialog"
+import { AddDialog, EditDialog } from "@/components/dialogs"
 import { Button } from "@/components/ui/button"
 import { TreeNode } from "@/types/tree"
 import { api } from "@/services/api"
-import { useEffect, useState } from "react"
+import { use, useCallback, useEffect, useState } from "react"
 
 
 interface Tree {
@@ -12,13 +12,16 @@ interface Tree {
     level: number,
     onClick: (node: TreeNode) => void,
     onToggle: (node: TreeNode) => void
-    isExpanded: boolean
+    isExpanded: boolean;
+    onNodeUpdate: (updatedNode: TreeNode) => void
 }
 
 
 
-export function Tree({ node, expandedNodes, level, onClick, onToggle, isExpanded }: Tree) {
+export function Tree({ node, expandedNodes, level, onClick, onToggle, isExpanded, onNodeUpdate }: Tree) {
     const [childNodes, setChildNodes] = useState<TreeNode[]>([])
+    const [isAddDialogOpen, setAddDialog] = useState(false)
+    const [isEditDialogOpen, setEditDialog] = useState(false)
 
     useEffect(() => {
         if (isExpanded && node.hasChild && childNodes.length === 0) {
@@ -26,11 +29,20 @@ export function Tree({ node, expandedNodes, level, onClick, onToggle, isExpanded
         }
     }, [isExpanded, node.id, node.hasChild, childNodes.length])
 
-
     async function loadChildNodes(id: string) {
         const children = await api.fetchChildNodes(id)
         setChildNodes(children)
     }
+
+    const handleNodeUpdate = useCallback((updatedNode: TreeNode) => {
+        onNodeUpdate(updatedNode) // Propagate update to parent
+        setEditDialog(false) // Close dialog after successful update
+    }, [onNodeUpdate])
+
+    const handleNodeAdd = useCallback((newNode: TreeNode) => {
+        setChildNodes(prev => [...prev, newNode])
+        setAddDialog(false)
+    }, [])
 
     return (
         <>
@@ -52,7 +64,11 @@ export function Tree({ node, expandedNodes, level, onClick, onToggle, isExpanded
                         }
                         <span className="truncate">{node.name}</span>
                     </div>
-                    <DialogContainer node={node} />
+                    <EditDialog node={node} key={node.id} isOpen={isAddDialogOpen} setIsOpen={setAddDialog} onEdit={handleNodeUpdate} />
+                    {node.type !== 'employee' &&
+                    <AddDialog node={node} key={node.id} isOpen={isEditDialogOpen} setIsOpen={setEditDialog} onAdd={handleNodeAdd} />
+                    }
+                     
                 </div>
 
                 {isExpanded && node.hasChild && <div className={`flex flex-col  gap-2`} style={{ marginLeft: (level + 1) + 'rem' }}>
@@ -66,6 +82,7 @@ export function Tree({ node, expandedNodes, level, onClick, onToggle, isExpanded
                                 isExpanded={expandedNodes.has(childNode.id)}
                                 onClick={onClick}
                                 onToggle={onToggle}
+                                onNodeUpdate={onNodeUpdate}
                             />
                         ))
                     }
