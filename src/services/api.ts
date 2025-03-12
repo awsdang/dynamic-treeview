@@ -6,13 +6,13 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Configuration for data generation
 const NUM_DEPARTMENTS = 20; 
-const MIN_SECTIONS_PER_DEPT = 5;
+const MIN_SECTIONS_PER_DEPT = 2;
 const MAX_SECTIONS_PER_DEPT = 12;
-const SUBSECTION_PROBABILITY = 0.3;
+const SUBSECTION_PROBABILITY = 0.0;
 const MIN_SUBSECTIONS = 2;
-const MAX_SUBSECTIONS = 5;
+const MAX_SUBSECTIONS = 12;
 const MIN_EMPLOYEES_PER_SECTION = 5;
-const MAX_EMPLOYEES_PER_SECTION = 15;
+const MAX_EMPLOYEES_PER_SECTION = 25;
 
 // Utility to generate random IDs
 const generateId = () => Math.random().toString(36).substring(2, 10);

@@ -22,9 +22,11 @@ function App() {
   const [isSearching, setIsSearching] = useState(false)
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null)
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
+  
 
   const clearSearch = () => {
     setIsSearching(false)
+    setSelectedNode(null)
   }
 
   useEffect(() => {
@@ -62,7 +64,6 @@ function App() {
         <div className="flex items-center justify-between mb-6 ">
           <h1 className="text-3xl font-bold">Department Tree</h1>
         </div>
-
         <div>
           <ResizablePanelGroup direction="horizontal" className="min-h-[80vh] border rounded-md"
           >
@@ -86,7 +87,11 @@ function App() {
                   )}
                 </div>
               </div>
-              <Tree onClick={handleClick} onToggle={toggleNode} tree={tree} />
+              {tree && tree.length > 0 && tree.map((node) => (
+                <div>
+                <Tree key={node.id} expandedNodes={expandedNodes} level={0} onClick={handleClick} onToggle={toggleNode} node={node} isExpanded={expandedNodes.has(node.id)}/>
+                </div>
+              ))}
             </ResizablePanel>
             <ResizableHandle withHandle className="bg-black" />
             <ResizablePanel defaultSize={40}>
