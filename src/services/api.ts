@@ -4,14 +4,14 @@ import type { TreeNode } from "../types/tree";
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Configuration for data generation
-const NUM_DEPARTMENTS = 20;
+const NUM_DEPARTMENTS = 2;
 const MIN_SECTIONS_PER_DEPT = 2;
-const MAX_SECTIONS_PER_DEPT = 12;
+const MAX_SECTIONS_PER_DEPT = 4;
 const SUBSECTION_PROBABILITY = 0.0;
 const MIN_SUBSECTIONS = 2;
-const MAX_SUBSECTIONS = 12;
+const MAX_SUBSECTIONS = 4;
 const MIN_EMPLOYEES_PER_SECTION = 5;
-const MAX_EMPLOYEES_PER_SECTION = 25;
+const MAX_EMPLOYEES_PER_SECTION = 10;
 
 // Utility to generate random IDs
 const generateId = () => Math.random().toString(36).substring(2, 10);
@@ -422,6 +422,43 @@ export const api = {
       
       // Update node's parentId
       node.parentId = newParentId;
+    }
+  },
+
+  async reorderNodes(parentId: string | null, newOrder: string[]): Promise<void> {
+    initializeCache();
+    await delay(400);
+
+    if (parentId === null) {
+      // Reorder root level (departments)
+      const newDepartments = newOrder.map(id => 
+        departmentsCache.find(d => d.id === id)!
+      ).filter(Boolean);
+      departmentsCache = newDepartments;
+    } else {
+      // Reorder children under a parent
+      const allNodes = await api.getAllNodes();
+      const parentNode = allNodes.find(node => node.id === parentId);
+      if (!parentNode) {
+        console.error(`Parent node ${parentId} not found`);
+        return;
+      }
+
+      if (parentNode.type === "department") {
+        const currentSections = sectionsCache.get(parentId) || [];
+        const reorderedSections = newOrder.map(id => 
+          currentSections.find(s => s.id === id)!
+        ).filter(Boolean);
+        sectionsCache.set(parentId, reorderedSections);
+        parentNode.childIds = reorderedSections.map(s => s.id);
+      } else if (parentNode.type === "section") {
+        const currentEmployees = employeesCache.get(parentId) || [];
+        const reorderedEmployees = newOrder.map(id => 
+          currentEmployees.find(e => e.id === id)!
+        ).filter(Boolean);
+        employeesCache.set(parentId, reorderedEmployees);
+        parentNode.childIds = reorderedEmployees.map(e => e.id);
+      }
     }
   },
 

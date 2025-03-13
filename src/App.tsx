@@ -11,19 +11,17 @@ import { TreeNode } from "@/types/tree";
 import { api } from "@/services/api";
 import { NodeDetails } from "@/components/nodeDetails";
 import { Tree } from "@/components/tree";
-import { DndContext, pointerWithin, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
 
 function App() {
   const [tree, setTree] = useState<TreeNode[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<TreeNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    console.log("Tree state updated:", tree);
-  }, [tree]);
 
   const clearSearch = () => {
     setSearchQuery("");
@@ -71,7 +69,7 @@ function App() {
         let parentId = node.parentId;
         while (parentId) {
           parentsToExpand.add(parentId);
-          parentId = findParentId(parentId);
+          parentId = findParentId(parentId) || '';
         }
       });
       setExpandedNodes((prev) => new Set([...prev, ...parentsToExpand]));
@@ -112,124 +110,132 @@ function App() {
   const onDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over) return;
-
+    
+    setIsMoving(true);
     const draggedNodeId = active.id as string;
     const destDroppableId = over.id as string;
-
-    // Get all nodes to properly validate moves
+  
     const allNodes = await api.getAllNodes();
     const draggedNode = allNodes.find((node) => node.id === draggedNodeId);
-    if (!draggedNode) return;
-
+    if (!draggedNode) {
+      setIsMoving(false);
+      return;
+    }
+  
     const sourceParentId = findParentId(draggedNodeId);
     let destParentId: string | null = null;
-    
-    // Determine the destination parent ID
+  
+    // Determine drop target
     if (destDroppableId === "root") {
-      destParentId = null; // Root level
+      destParentId = null;
     } else if (destDroppableId.includes("-children")) {
-      // Dropping into a parent's children container
       destParentId = destDroppableId.split("-children")[0];
     } else {
-      // If dropping onto another node, we need to determine if it's a sibling or potential parent
       const destNode = allNodes.find(node => node.id === destDroppableId);
       if (destNode) {
         if (destNode.hasChild) {
-          // Dropping onto a parent-capable node (department or section)
           destParentId = destNode.id;
         } else {
-          // Dropping onto a sibling, so we share the same parent
           destParentId = findParentId(destNode.id);
         }
       }
     }
-
-    // Validate move based on node types
+  
+    // Validate move
     let validMove = false;
     if (draggedNode.type === "department") {
-      // Departments can only be at the root level
       if (destParentId === null) validMove = true;
     } else if (draggedNode.type === "section") {
-      // Sections must be under a department
       if (destParentId !== null) {
         const destParent = allNodes.find(node => node.id === destParentId);
-        if (destParent && destParent.type === "department") {
-          validMove = true;
-        }
+        if (destParent && destParent.type === "department") validMove = true;
       }
     } else if (draggedNode.type === "employee") {
-      // Employees must be under a section
       if (destParentId !== null) {
         const destParent = allNodes.find(node => node.id === destParentId);
-        if (destParent && destParent.type === "section") {
-          validMove = true;
-        }
+        if (destParent && destParent.type === "section") validMove = true;
       }
     }
-
+  
     if (!validMove) {
-      console.error("Invalid move:", draggedNode.type, "cannot be moved to", destParentId);
+      console.error("Invalid move:", draggedNode.type, "to", destParentId);
+      setIsMoving(false);
       return;
     }
-
-    console.log(`Moving ${draggedNode.name} (${draggedNode.type}) from ${sourceParentId} to ${destParentId || "root"}`);
-
-    // Handle reordering within the same parent
-    if (sourceParentId === destParentId) {
-      // Reordering logic
-      let siblings;
-      if (sourceParentId === null) {
-        // Root level nodes (departments)
-        siblings = tree.filter(node => node.type === "department");
-      } else {
-        // Children nodes
-        siblings = await api.fetchChildNodes(sourceParentId);
+  
+    try {
+      if (sourceParentId === destParentId) {
+        // Do nothing if it's the same parent - no reordering allowed
+        setIsMoving(false);
+        return;
       }
-
-      const sourceIndex = siblings.findIndex(node => node.id === draggedNodeId);
-      let destIndex = siblings.length - 1; // Default to end
-      
-      if (!destDroppableId.includes("-children")) {
-        // If dropping onto a specific node, insert at that position
-        destIndex = siblings.findIndex(node => node.id === destDroppableId);
-        if (destIndex === -1) {
-          destIndex = over.data.current?.index ?? siblings.length - 1;
-        }
-      }
-      
-      if (sourceIndex === destIndex) return; // No change needed
-      
-      const reorderedSiblings = [...siblings];
-      const [movedNode] = reorderedSiblings.splice(sourceIndex, 1);
-      reorderedSiblings.splice(destIndex > sourceIndex ? destIndex : destIndex + 1, 0, movedNode);
-      
-      if (sourceParentId === null) {
-        setTree(reorderedSiblings);
-      } else {
-        await api.updateNode(sourceParentId, {
-          childIds: reorderedSiblings.map(n => n.id)
-        });
-        
-        // Refresh the tree to reflect changes
-        const rootNodes = await api.fetchRootNodes();
-        setTree(rootNodes);
-      }
-    } else {
-      // Moving to a different parent
+  
+      // Moving to different parent
       await api.moveNode(draggedNodeId, destParentId || "root");
-      
-      // Refresh the tree to show the updated structure
       const rootNodes = await api.fetchRootNodes();
       setTree(rootNodes);
+    } catch (error) {
+      console.error("Drag operation failed:", error);
+    } finally {
+      setIsMoving(false);
     }
   };
 
+
+  const handleReorder = async (nodeId: string, direction: 'up' | 'down') => {
+    const allNodes = await api.getAllNodes();
+    setIsMoving(true);
+    const node = allNodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const parentId = findParentId(nodeId);
+    const siblings = parentId === null 
+      ? [...tree]
+      : await api.fetchChildNodes(parentId);
+
+    const currentIndex = siblings.findIndex(n => n.id === nodeId);
+    if (currentIndex === -1) return;
+
+    // Calculate new index
+    const newIndex = direction === 'up' 
+      ? Math.max(0, currentIndex - 1)
+      : Math.min(siblings.length - 1, currentIndex + 1);
+
+    if (currentIndex === newIndex) return;
+
+    // Reorder siblings
+    const reorderedSiblings = [...siblings];
+    const [movedNode] = reorderedSiblings.splice(currentIndex, 1);
+    reorderedSiblings.splice(newIndex, 0, movedNode);
+
+    // Update API and tree state
+    try {
+      if (parentId === null) {
+        setTree(reorderedSiblings);
+        await api.reorderNodes(null, reorderedSiblings.map(n => n.id));
+      } else {
+        await api.reorderNodes(parentId, reorderedSiblings.map(n => n.id));
+        const rootNodes = await api.fetchRootNodes();
+        setTree(rootNodes);
+      }
+      setIsMoving(false);
+    } catch (error) {
+      console.error("Reorder failed:", error);
+    }
+  };
+
+  useEffect(() => {
+    console.log("Tree state updated:", tree);
+  }, [tree, isMoving]);
+
+
+  
   return (
     <div className="min-h-screen bg-background p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Department Tree</h1>
       </div>
-      <DndContext collisionDetection={pointerWithin} onDragEnd={onDragEnd}>
+      <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <ResizablePanelGroup direction="horizontal" className="min-h-[80vh] border rounded-md">
           <ResizablePanel defaultSize={60}>
             <div className="flex items-center justify-center p-6 border-b">
@@ -267,15 +273,14 @@ function App() {
                     onNodeUpdate={handleNodeUpdate}
                     index={index}
                     droppableId="search-results"
+                    onReorder={handleReorder}
                   />
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">No results found</p>
               )
-            ) : tree.length > 0 ? (
-              tree
-                .filter((node) => !findParentId(node.id))
-                .map((node, index) => (
+            ) : !isMoving && tree.length > 0 ? (
+              tree.map((node, index) => (
                   <Tree
                     key={node.id}
                     expandedNodes={expandedNodes}
@@ -287,6 +292,7 @@ function App() {
                     onNodeUpdate={handleNodeUpdate}
                     index={index}
                     droppableId="root"
+                    onReorder={handleReorder}
                   />
                 ))
             ) : (

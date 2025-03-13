@@ -1,9 +1,9 @@
-import { ChevronDown, ChevronRight, Dock, Folder, User, GripVertical } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, Dock, Folder, User, GripVertical } from "lucide-react";
 import { AddDialog, EditDialog } from "@/components/dialogs";
 import { Button } from "@/components/ui/button";
 import { TreeNode } from "@/types/tree";
 import { api } from "@/services/api";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, memo } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 
 interface TreeProps {
@@ -16,9 +16,10 @@ interface TreeProps {
   onNodeUpdate: (updatedNode: TreeNode) => void;
   index: number;
   droppableId: string;
+  onReorder: (nodeId: string, direction: 'up' | 'down') => void;
 }
 
-export function Tree({
+export const Tree = memo(function Tree({
   node,
   expandedNodes,
   level,
@@ -28,26 +29,38 @@ export function Tree({
   onNodeUpdate,
   index,
   droppableId,
+  onReorder,
 }: TreeProps) {
   const [childNodes, setChildNodes] = useState<TreeNode[]>([]);
   const [isAddDialogOpen, setAddDialog] = useState(false);
   const [isEditDialogOpen, setEditDialog] = useState(false);
   const [isLoadingChildren, setIsLoadingChildren] = useState(false);
 
-  // Pass the index data for reordering purposes
-  const { attributes, listeners, setNodeRef: setDraggableRef, transform } = useDraggable({
+  const { 
+    attributes, 
+    listeners, 
+    setNodeRef: setDraggableRef, 
+    transform, 
+    isDragging 
+  } = useDraggable({
     id: node.id,
-    data: { index }
+    data: { index, type: node.type, parentId: node.parentId }
   });
 
-  const { setNodeRef: setDroppableRef, isOver: isChildrenOver } = useDroppable({
+  const { 
+    setNodeRef: setDroppableRef, 
+    isOver: isChildrenOver 
+  } = useDroppable({
     id: `${node.id}-children`,
-    data: { index, nodeId: node.id },
+    data: { index, nodeId: node.id }
   });
 
-  const { setNodeRef: setNodeDroppableRef, isOver: isNodeOver } = useDroppable({
+  const { 
+    setNodeRef: setNodeDroppableRef, 
+    isOver: isNodeOver 
+  } = useDroppable({
     id: node.id,
-    data: { index, nodeId: node.id },
+    data: { index, nodeId: node.id }
   });
 
   useEffect(() => {
@@ -96,35 +109,53 @@ export function Tree({
     [node, onNodeUpdate]
   );
 
+  const handleMoveUp = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onReorder(node.id, 'up');
+  }, [node.id, onReorder]);
+
+  const handleMoveDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onReorder(node.id, 'down');
+  }, [node.id, onReorder]);
+
+  const handleToggleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggle(node);
+  }, [node, onToggle]);
+
+  const handleNodeClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClick(node);
+  }, [node, onClick]);
+
   const style = transform
     ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        opacity: 0.7,
+        zIndex: 10,
+        transition: 'none'
       }
-    : undefined;
-
-  const handleToggleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onToggle(node);
-  };
-
-  const handleNodeClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onClick(node);
-  };
+    : {
+        transition: 'background-color 0.2s ease',
+        opacity: isDragging ? 0.5 : 1,
+        backgroundColor: isNodeOver ? "#e6f7ff" : undefined
+      };
 
   return (
-    <div key={node.id} style={{ position: "relative" }}>
+    <div style={{ position: "relative" }}>
       <div
         ref={(el) => {
           setDraggableRef(el);
           setNodeDroppableRef(el);
         }}
         className="group flex items-center py-1.5 cursor-pointer select-none hover:bg-accent/50"
-        style={{ ...style, backgroundColor: isNodeOver ? "#e6f7ff" : undefined }}
+        style={style}
       >
         <div {...listeners} {...attributes} className="mr-2">
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
+        
         <Button onClick={handleToggleClick} type="button" variant="ghost">
           {node.hasChild &&
             (isExpanded ? (
@@ -133,6 +164,7 @@ export function Tree({
               <ChevronRight className="h-3 w-3 text-muted-foreground" />
             ))}
         </Button>
+        
         <div onClick={handleNodeClick} className="flex items-center gap-2 flex-1">
           {node.type === "employee" ? (
             <User className="h-4 w-4 text-blue-500 shrink-0" />
@@ -143,6 +175,13 @@ export function Tree({
           )}
           <span className="truncate">{node.name}</span>
         </div>
+        
+        <Button variant={'ghost'} onClick={handleMoveUp}>
+          <ChevronUp className="h-6 w-6 opacity-0 group-hover:opacity-100" />
+        </Button>
+        <Button variant={'ghost'} onClick={handleMoveDown}>
+          <ChevronDown className="h-6 w-6 opacity-0 group-hover:opacity-100" />
+        </Button>
         <div className="flex gap-1">
           <EditDialog
             node={node}
@@ -167,7 +206,9 @@ export function Tree({
           className="flex flex-col gap-2"
           style={{
             marginLeft: `${level + 1}rem`,
+            minHeight: '20px',
             backgroundColor: isChildrenOver ? "#e6f7ff" : undefined,
+            border: isChildrenOver ? "1px dashed #1890ff" : "none"
           }}
         >
           {isLoadingChildren ? (
@@ -185,6 +226,7 @@ export function Tree({
                 index={childIndex}
                 onNodeUpdate={onNodeUpdate}
                 droppableId={`${node.id}-children`}
+                onReorder={onReorder}
               />
             ))
           ) : (
@@ -194,4 +236,14 @@ export function Tree({
       )}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.node.id === nextProps.node.id &&
+    prevProps.node.name === nextProps.node.name &&
+    prevProps.isExpanded === nextProps.isExpanded &&
+    prevProps.index === nextProps.index &&
+    prevProps.droppableId === nextProps.droppableId &&
+    prevProps.expandedNodes.size === nextProps.expandedNodes.size &&
+    Array.from(prevProps.expandedNodes).every(id => nextProps.expandedNodes.has(id))
+  );
+});
