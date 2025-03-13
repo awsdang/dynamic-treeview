@@ -52,13 +52,17 @@ export function NodeDetails({ node }: { node: TreeNode | null }) {
                                 {node.details?.employeeCount} employees
                             </span>
                         </div>
+                        {node.parentId &&
                         <>
+                       
                             <Separator />
+                            
                             <div>
                                 <h3 className="text-sm font-medium">Parent</h3>
                                 <p className="text-sm text-muted-foreground mt-1">ID: {node.parentId}</p>
                             </div>
                         </>
+                        }
                         <Separator />
                         <div>
                             <h3 className="text-sm font-medium">Metadata</h3>
@@ -81,10 +85,12 @@ export function NodeDetails({ node }: { node: TreeNode | null }) {
                                 </div>
                             </div>
                         </div>
+                        {node.details?.head && 
+                        <>
                         <Separator />
 
                         <div>
-                            <h3 className="text-sm font-medium">Department Head Info</h3>
+                            <h3 className="text-sm font-medium">{node.type === 'department' ? "Department Head Info" :node.type === 'section' ? "Section Head Info" : "Employee Info"}</h3>
                             <div className="grid grid-cols-2 gap-2 mt-2">
                                 <div className="bg-muted col-span-2 p-2 rounded-md">
                                     <p className="text-xs font-medium">Full Name</p>
@@ -100,6 +106,8 @@ export function NodeDetails({ node }: { node: TreeNode | null }) {
                                 </div>
                             </div>
                         </div>
+                        </>
+                        }
                     </div>
                 </CardContent>
             </Card>

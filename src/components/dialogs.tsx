@@ -20,7 +20,7 @@ import * as z from "zod"
 import { api } from "@/services/api"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Textarea } from "@/components/ui/textarea"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 
 
 const addFormSchema = z.object({
