@@ -1,22 +1,18 @@
 import type { TreeNode } from "../types/tree";
 
-// Simulated network delay
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Configuration for data generation
-const NUM_DEPARTMENTS = 2;
+const NUM_DEPARTMENTS = 15;
 const MIN_SECTIONS_PER_DEPT = 2;
-const MAX_SECTIONS_PER_DEPT = 4;
+const MAX_SECTIONS_PER_DEPT = 15;
 const SUBSECTION_PROBABILITY = 0.0;
 const MIN_SUBSECTIONS = 2;
-const MAX_SUBSECTIONS = 4;
+const MAX_SUBSECTIONS = 15;
 const MIN_EMPLOYEES_PER_SECTION = 5;
-const MAX_EMPLOYEES_PER_SECTION = 10;
+const MAX_EMPLOYEES_PER_SECTION = 15;
 
-// Utility to generate random IDs
 const generateId = () => Math.random().toString(36).substring(2, 10);
 
-// Helper to generate timestamp and additional fields
 const createMeta = () => ({
   createdAt: new Date().toISOString(),
   lastUpdated: new Date().toISOString(),
@@ -24,12 +20,10 @@ const createMeta = () => ({
   userNote: "",
 });
 
-// Caches for storing generated nodes
 let departmentsCache: TreeNode[] = [];
 const sectionsCache: Map<string, TreeNode[]> = new Map();
 const employeesCache: Map<string, TreeNode[]> = new Map();
 
-// Generate employees (leaf nodes)
 const generateEmployees = (parentId: string, parentName: string, count: number): TreeNode[] => {
   return Array.from({ length: count }).map((_, index) => ({
     id: generateId(),
@@ -53,7 +47,6 @@ const generateEmployees = (parentId: string, parentName: string, count: number):
   }));
 };
 
-// Generate sections (some with subsections or employees)
 const generateSections = (
   parentId: string,
   parentName: string,
@@ -100,7 +93,6 @@ const generateSections = (
   return sections;
 };
 
-// Generate departments
 const generateDepartments = (count: number): TreeNode[] => {
   const departments = Array.from({ length: count }).map((_, index) => {
     const department: TreeNode = {
@@ -141,14 +133,12 @@ const generateDepartments = (count: number): TreeNode[] => {
   return departments;
 };
 
-// Initialize caches (called once)
 const initializeCache = () => {
   if (departmentsCache.length === 0) {
     departmentsCache = generateDepartments(NUM_DEPARTMENTS);
   }
 };
 
-// Find parent of a node (for move operations)
 const findParentId = (nodeId: string): string | null => {
   for (const [parentId, sections] of sectionsCache) {
     if (sections.some((s) => s.id === nodeId)) return parentId;
@@ -159,18 +149,54 @@ const findParentId = (nodeId: string): string | null => {
   return null;
 };
 
-// API implementation
 export const api = {
   async fetchRootNodes(): Promise<TreeNode[]> {
     initializeCache();
     await delay(500);
-    return departmentsCache;
+    return departmentsCache.map(node => ({ ...node, children: undefined }));
   },
 
   async fetchChildNodes(parentId: string): Promise<TreeNode[]> {
     initializeCache();
     await delay(300);
-    return sectionsCache.get(parentId) || employeesCache.get(parentId) || [];
+    const children = sectionsCache.get(parentId) || employeesCache.get(parentId) || [];
+    return children.map(node => ({ ...node, children: undefined }));
+  },
+
+  /** 
+   * New method to fetch a node by ID with its immediate children included.
+   * @param nodeId The ID of the node to fetch.
+   * @returns The node with its immediate children, or throws an error if not found.
+   */
+  async fetchNodesWithChildren(nodeId: string): Promise<TreeNode> {
+    initializeCache();
+    await delay(350);
+
+    // Check departments (root level)
+    const department = departmentsCache.find(d => d.id === nodeId);
+    if (department) {
+      const children = sectionsCache.get(department.id) || [];
+      return { ...department, children: children.map(child => ({ ...child, children: undefined })) };
+    }
+
+    // Check sections
+    for (const [_, sections] of sectionsCache) {
+      const section = sections.find(s => s.id === nodeId);
+      if (section) {
+        const children = sectionsCache.get(section.id) || employeesCache.get(section.id) || [];
+        return { ...section, children: children.map(child => ({ ...child, children: undefined })) };
+      }
+    }
+
+    // Check employees (though employees typically have no children)
+    for (const [_, employees] of employeesCache) {
+      const employee = employees.find(e => e.id === nodeId);
+      if (employee) {
+        return { ...employee, children: [] }; // Employees have no children
+      }
+    }
+
+    throw new Error(`Node with ID ${nodeId} not found`);
   },
 
   async searchNodes(query: string): Promise<TreeNode[]> {
@@ -183,7 +209,8 @@ export const api = {
       ...Array.from(sectionsCache.values()).flat(),
       ...Array.from(employeesCache.values()).flat(),
     ];
-    return allNodes.filter((node) => node.name.toLowerCase().includes(normalizedQuery));
+    return allNodes.filter((node) => node.name.toLowerCase().includes(normalizedQuery))
+      .map(node => ({ ...node, children: undefined }));
   },
 
   async addNode(
@@ -229,7 +256,7 @@ export const api = {
       }
     }
 
-    return newNode;
+    return { ...newNode, children: undefined };
   },
 
   async editNode(nodeId: string, updates: Partial<TreeNode>): Promise<TreeNode> {
@@ -241,7 +268,7 @@ export const api = {
     if (deptIndex >= 0) {
       node = departmentsCache[deptIndex];
       departmentsCache[deptIndex] = { ...node, ...updates, childIds: node.childIds };
-      return departmentsCache[deptIndex];
+      return { ...departmentsCache[deptIndex], children: undefined };
     }
 
     for (const [parentId, sections] of sectionsCache.entries()) {
@@ -249,7 +276,7 @@ export const api = {
       if (sectionIndex >= 0) {
         node = sections[sectionIndex];
         sections[sectionIndex] = { ...node, ...updates, childIds: node.childIds };
-        return sections[sectionIndex];
+        return { ...sections[sectionIndex], children: undefined };
       }
     }
 
@@ -258,7 +285,7 @@ export const api = {
       if (employeeIndex >= 0) {
         node = employees[employeeIndex];
         employees[employeeIndex] = { ...node, ...updates };
-        return employees[employeeIndex];
+        return { ...employees[employeeIndex], children: undefined };
       }
     }
 
@@ -269,7 +296,6 @@ export const api = {
     initializeCache();
     await delay(400);
 
-    // Handle the root case
     if (newParentId === "root") {
       newParentId = "";
     }
@@ -277,14 +303,12 @@ export const api = {
     let node: TreeNode | undefined;
     let nodeType: string | undefined;
 
-    // Find the node in departments
     const deptIndex = departmentsCache.findIndex((d) => d.id === nodeId);
     if (deptIndex >= 0) {
       node = departmentsCache[deptIndex];
       nodeType = "department";
     }
 
-    // Find the node in sections
     if (!node) {
       for (const sections of sectionsCache.values()) {
         const foundIdx = sections.findIndex((s) => s.id === nodeId);
@@ -296,7 +320,6 @@ export const api = {
       }
     }
 
-    // Find the node in employees
     if (!node) {
       for (const employees of employeesCache.values()) {
         const foundIdx = employees.findIndex((e) => e.id === nodeId);
@@ -313,7 +336,6 @@ export const api = {
       return;
     }
 
-    // Check if the move is valid
     if (nodeType === "department" && newParentId !== "") {
       console.error("Departments can only exist at the root level");
       return;
@@ -336,13 +358,11 @@ export const api = {
       }
     }
 
-    // Find the old parent
     const oldParentId = findParentId(nodeId);
     if (oldParentId === newParentId) {
-      return; // Already in the correct parent, no need to move
+      return;
     }
 
-    // Remove from old parent
     if (oldParentId) {
       if (nodeType === "section") {
         const oldParentSections = sectionsCache.get(oldParentId) || [];
@@ -364,7 +384,6 @@ export const api = {
           oldParentEmployees.filter((e) => e.id !== nodeId)
         );
         
-        // Find the section that was the old parent
         const allSections = Array.from(sectionsCache.values()).flat();
         const oldParent = allSections.find((s) => s.id === oldParentId);
         if (oldParent) {
@@ -373,22 +392,17 @@ export const api = {
         }
       }
     } else if (nodeType === "department") {
-      // Remove department from root
       departmentsCache = departmentsCache.filter((d) => d.id !== nodeId);
     }
 
-    // Add to new parent
     if (newParentId === "") {
-      // Add to root (department only)
       if (nodeType === "department") {
         departmentsCache.push(node);
       }
     } else if (nodeType === "section") {
-      // Add section to a department
       const newParentSections = sectionsCache.get(newParentId) || [];
       sectionsCache.set(newParentId, [...newParentSections, { ...node, parentId: newParentId }]);
       
-      // Update department
       const destParent = departmentsCache.find((d) => d.id === newParentId);
       if (destParent) {
         destParent.childIds = [...(destParent.childIds || []), nodeId];
@@ -396,21 +410,17 @@ export const api = {
           (destParent.details!.employeeCount || 0) + (node.details?.employeeCount || 0);
       }
       
-      // Update node's parentId
       node.parentId = newParentId;
     } else if (nodeType === "employee") {
-      // Add employee to a section
       const newParentEmployees = employeesCache.get(newParentId) || [];
       employeesCache.set(newParentId, [...newParentEmployees, { ...node, parentId: newParentId }]);
       
-      // Update section
       const allSections = Array.from(sectionsCache.values()).flat();
       const destParent = allSections.find((s) => s.id === newParentId);
       if (destParent) {
         destParent.childIds = [...(destParent.childIds || []), nodeId];
         destParent.details!.employeeCount = (destParent.details!.employeeCount || 0) + 1;
         
-        // Also update the department that contains this section
         const deptId = findParentId(destParent.id);
         if (deptId) {
           const dept = departmentsCache.find(d => d.id === deptId);
@@ -420,7 +430,6 @@ export const api = {
         }
       }
       
-      // Update node's parentId
       node.parentId = newParentId;
     }
   },
@@ -430,13 +439,11 @@ export const api = {
     await delay(400);
 
     if (parentId === null) {
-      // Reorder root level (departments)
       const newDepartments = newOrder.map(id => 
         departmentsCache.find(d => d.id === id)!
       ).filter(Boolean);
       departmentsCache = newDepartments;
     } else {
-      // Reorder children under a parent
       const allNodes = await api.getAllNodes();
       const parentNode = allNodes.find(node => node.id === parentId);
       if (!parentNode) {
@@ -469,20 +476,19 @@ export const api = {
       ...departmentsCache,
       ...Array.from(sectionsCache.values()).flat(),
       ...Array.from(employeesCache.values()).flat(),
-    ];
+    ].map(node => ({ ...node, children: undefined }));
   },
 
   async updateNode(nodeId: string, updates: Partial<TreeNode>): Promise<TreeNode> {
     initializeCache();
     await delay(400);
     
-    // Find the node to update
     let node: TreeNode | undefined;
     const deptIndex = departmentsCache.findIndex((d) => d.id === nodeId);
     if (deptIndex >= 0) {
       node = departmentsCache[deptIndex];
       departmentsCache[deptIndex] = { ...node, ...updates };
-      return departmentsCache[deptIndex];
+      return { ...departmentsCache[deptIndex], children: undefined };
     }
 
     for (const [parentId, sections] of sectionsCache.entries()) {
@@ -490,7 +496,7 @@ export const api = {
       if (sectionIndex >= 0) {
         node = sections[sectionIndex];
         sections[sectionIndex] = { ...node, ...updates };
-        return sections[sectionIndex];
+        return { ...sections[sectionIndex], children: undefined };
       }
     }
 
@@ -499,7 +505,7 @@ export const api = {
       if (employeeIndex >= 0) {
         node = employees[employeeIndex];
         employees[employeeIndex] = { ...node, ...updates };
-        return employees[employeeIndex];
+        return { ...employees[employeeIndex], children: undefined };
       }
     }
 

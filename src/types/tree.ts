@@ -1,31 +1,26 @@
 export interface TreeNode {
-    id: string;
-    name: string;
-    parentId?: string;
-    type: 'department' | 'section' | 'employee';
-    childIds?: string[];
-    hasChild?: boolean;
-    details?: Details
-    createdAt?: string;
-    lastUpdated?: string;
-    status: "active" | "inactive";
-  }
-
-  interface Details {
+  id: string;
+  name: string;
+  type: "department" | "section" | "employee";
+  hasChild: boolean;
+  childIds?: string[];
+  children?: TreeNode[]; // Added for nested structure
+  status?: "active" | "inactive";
+  createdAt?: string;
+  lastUpdated?: string;
+  resourceLinks?: string[];
+  userNote?: string;
+  details?: {
     description?: string;
     employeeCount?: number;
-    resourceLinks?: string[];
-    userNote?: string;
-    head?: HeadInfo;
-    [key: string]: unknown
-  }
-
- interface HeadInfo {
-    id:string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    idNumber: number;
- }
-  
+    head?: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      idNumber: number;
+    };
+  };
+  parentId?: string;
+}
