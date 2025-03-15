@@ -1,10 +1,10 @@
-import { ChevronDown, ChevronUp, ChevronRight, Dock, Folder, User, GripVertical, Loader2 } from "lucide-react";
-import { AddDialog, EditDialog } from "@/components/dialogs";
-import { Button } from "@/components/ui/button";
-import { TreeNode } from "@/types/tree";
-import { api } from "@/services/api";
-import { useCallback, useEffect, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { useTreeNode } from "@/hooks/useTreeNode";
+import { TreeNode } from "@/types/tree";
+import { TreeNodeContent } from "./treeNodeContent";
+import { TreeNodeControls } from "./treeNodeControls";
+import { TreeChildren } from "./treeChildren";
+import { GripVertical } from "lucide-react";
 
 interface TreeProps {
   node: TreeNode;
@@ -17,7 +17,7 @@ interface TreeProps {
   index: number;
   onReorder: (nodeId: string, direction: "up" | "down") => void;
   onSetChildren: (nodeId: string, children: TreeNode[]) => void;
-  siblingsCount:number
+  siblingsCount: number;
 }
 
 export default function Tree({
@@ -31,11 +31,17 @@ export default function Tree({
   index,
   onReorder,
   onSetChildren,
-  siblingsCount
+  siblingsCount,
 }: TreeProps) {
-  const [isAddDialogOpen, setAddDialog] = useState(false);
-  const [isEditDialogOpen, setEditDialog] = useState(false);
-  const [isLoadingChildren, setIsLoadingChildren] = useState(false);
+  const {
+    isAddDialogOpen,
+    setAddDialog,
+    isEditDialogOpen,
+    setEditDialog,
+    isLoadingChildren,
+    handleNodeUpdate,
+    handleNodeAdd,
+  } = useTreeNode(node, isExpanded, onSetChildren, onNodeUpdate);
 
   const {
     attributes,
@@ -64,78 +70,15 @@ export default function Tree({
     data: { index, nodeId: node.id },
   });
 
-  useEffect(() => {
-    if (node.hasChild && isExpanded && !node.children) {
-      loadChildNodes();
-    }
-  }, [node.id, node.hasChild, isExpanded]);
+  const handleToggleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggle(node);
+  };
 
-  const loadChildNodes = useCallback(async () => {
-    setIsLoadingChildren(true);
-    try {
-      const children = await api.fetchChildNodes(node.id);
-      onSetChildren(node.id, children);
-    } catch (error) {
-      console.error(`Failed to load children for ${node.id}:`, error);
-    } finally {
-      setIsLoadingChildren(false);
-    }
-  }, [node.id, onSetChildren]);
-
-  const handleNodeUpdate = useCallback(
-    (updatedNode: TreeNode) => {
-      onNodeUpdate(updatedNode);
-      setEditDialog(false);
-    },
-    [onNodeUpdate]
-  );
-
-  const handleNodeAdd = useCallback(
-    async (newNode: TreeNode) => {
-      try {
-        const updatedChildren = [...(node.children || []), newNode];
-        onSetChildren(node.id, updatedChildren);
-        setAddDialog(false);
-        await api.addNode(node.id, newNode);
-      } catch (error) {
-        console.error("Failed to add node:", error);
-        onSetChildren(node.id, node.children || []);
-      }
-    },
-    [node, onSetChildren]
-  );
-
-  const handleMoveUp = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onReorder(node.id, "up");
-    },
-    [node.id, onReorder]
-  );
-
-  const handleMoveDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onReorder(node.id, "down");
-    },
-    [node.id, onReorder]
-  );
-
-  const handleToggleClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onToggle(node);
-    },
-    [node, onToggle]
-  );
-
-  const handleNodeClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onClick(node);
-    },
-    [node, onClick]
-  );
+  const handleNodeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClick(node);
+  };
 
   const style = transform
     ? {
@@ -163,93 +106,40 @@ export default function Tree({
         <div {...listeners} {...attributes} className="mr-2">
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
-
-        <Button onClick={handleToggleClick} type="button" variant="ghost">
-          {node.hasChild &&
-            (isExpanded ? (
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-3 w-3 text-muted-foreground" />
-            ))}
-        </Button>
-
-        <div onClick={handleNodeClick} className="flex items-center gap-2 flex-1">
-          {node.type === "employee" ? (
-            <User className="h-4 w-4 text-blue-500 shrink-0" />
-          ) : node.type === "section" ? (
-            <Dock className="h-4 w-4 text-blue-500 shrink-0" />
-          ) : (
-            <Folder className="h-4 w-4 text-blue-500 shrink-0" />
-          )}
-          <span className="truncate">{node.name}</span>
-        </div>
-
-        {index > 0 && (
-          <Button variant="ghost" onClick={handleMoveUp}>
-            <ChevronUp className="h-6 w-6 opacity-0 group-hover:opacity-100" />
-          </Button>
-        )}
-        {index < siblingsCount - 1 && (
-          <Button variant="ghost" onClick={handleMoveDown}>
-            <ChevronDown className="h-6 w-6 opacity-0 group-hover:opacity-100" />
-          </Button>
-        )}
-        <div className="flex gap-1">
-          <EditDialog
-            node={node}
-            isOpen={isEditDialogOpen}
-            setIsOpen={setEditDialog}
-            onEdit={handleNodeUpdate}
-          />
-          {node.type !== "employee" && (
-            <AddDialog
-              node={node}
-              isOpen={isAddDialogOpen}
-              setIsOpen={setAddDialog}
-              onAdd={handleNodeAdd}
-            />
-          )}
-        </div>
+        <TreeNodeContent
+          node={node}
+          isExpanded={isExpanded}
+          onToggleClick={handleToggleClick}
+          onNodeClick={handleNodeClick}
+        />
+        <TreeNodeControls
+          node={node}
+          index={index}
+          siblingsCount={siblingsCount}
+          onReorder={onReorder}
+          isAddDialogOpen={isAddDialogOpen}
+          setAddDialog={setAddDialog}
+          isEditDialogOpen={isEditDialogOpen}
+          setEditDialog={setEditDialog}
+          handleNodeUpdate={handleNodeUpdate}
+          handleNodeAdd={handleNodeAdd}
+        />
       </div>
-
-      {isExpanded && node.hasChild && (
-        <div
-          ref={setDroppableRef}
-          className="flex flex-col gap-2"
-          style={{
-            marginLeft: `${level + 1}rem`,
-            minHeight: "20px",
-            backgroundColor: isChildrenOver ? "#e6f7ff" : undefined,
-            border: isChildrenOver ? "1px dashed #1890ff" : "none",
-          }}
-        >
-          {isLoadingChildren ? (
-             <div className="flex flex-row mx-2 gap-1 items-center">
-             <Loader2 className="h-4 w-4 animate-spin" />
-             <p className="text-sm text-muted-foreground">Loading...</p>
-             </div>
-          ) : node.children && node.children.length > 0 ? (
-            node.children.map((childNode, childIndex) => (
-              <Tree
-                key={childNode.id}
-                node={childNode}
-                level={level + 1}
-                expandedNodes={expandedNodes}
-                isExpanded={expandedNodes.has(childNode.id)}
-                onClick={onClick}
-                onToggle={onToggle}
-                index={childIndex}
-                onNodeUpdate={onNodeUpdate}
-                onReorder={onReorder}
-                onSetChildren={onSetChildren}
-                siblingsCount={(node.children as any).length}
-              />
-            ))
-          ) : (
-            <p className="text-sm text-muted-foreground">No children</p>
-          )}
-        </div>
-      )}
+      <div ref={setDroppableRef}>
+        <TreeChildren
+          node={node}
+          isExpanded={isExpanded}
+          level={level}
+          expandedNodes={expandedNodes}
+          isLoadingChildren={isLoadingChildren}
+          onClick={onClick}
+          onToggle={onToggle}
+          onNodeUpdate={onNodeUpdate}
+          onReorder={onReorder}
+          onSetChildren={onSetChildren}
+          isOver={isChildrenOver}
+        />
+      </div>
     </div>
   );
 }

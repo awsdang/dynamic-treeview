@@ -11,7 +11,7 @@ const MAX_SUBSECTIONS = 15;
 const MIN_EMPLOYEES_PER_SECTION = 5;
 const MAX_EMPLOYEES_PER_SECTION = 15;
 
-const generateId = () => Math.random().toString(36).substring(2, 10);
+export const generateId = () => Math.random().toString(36).substring(2, 10);
 
 const createMeta = () => ({
   createdAt: new Date().toISOString(),

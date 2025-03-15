@@ -1,5 +1,3 @@
-# Untitled
-
 # Scalable Dynamic Tree View - Qi Card Developer Task
 
 This repository contains a **React + TypeScript** application that implements a **scalable, dynamic tree view** to handle large datasets (1000+ nodes). It demonstrates lazy-loading, searching, drag-and-drop reordering, and adding/editing nodes, all while maintaining performance and a clean architecture.

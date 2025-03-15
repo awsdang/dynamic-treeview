@@ -30,8 +30,8 @@ export function NodeDetails({ node }: { node: TreeNode | null }) {
     const formattedCreatedAt = formatDate(node.createdAt)
     const formattedlastUpdated = formatDate(node.lastUpdated)
     return (
-        <div className="p-4 h-full">
-            <Card className="h-full">
+        <div className="p-4 ">
+            <Card className="">
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle>{node.name}</CardTitle>
@@ -40,7 +40,7 @@ export function NodeDetails({ node }: { node: TreeNode | null }) {
                     <CardDescription>ID: {node.id}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-4 ">
                         <div>
                             <h3 className="text-sm font-medium">Description</h3>
                             <p className="text-sm text-muted-foreground mt-1">{node.details?.description}</p>
