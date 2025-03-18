@@ -54,6 +54,7 @@ export const findNodeById = (nodes: TreeNode[], id: string): TreeNode | null => 
 
 export const findParentId = (nodes: TreeNode[], nodeId: string): string | null => {
   const findParent = (nodes: TreeNode[], parentId: string | null): string | null => {
+    parentId = parentId || null;
     for (const node of nodes) {
       if (node.children && node.children.some(child => child.id === nodeId)) {
         return node.id;

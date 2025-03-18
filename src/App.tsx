@@ -33,7 +33,7 @@ function App() {
     searchResults,
     clearSearch,
     performSearch,
-  } = useSearch(tree);
+  } = useSearch();
 
   const { onDragEnd } = useDragAndDrop(tree, setTree, setIsSyncing);
   const { handleNodeUpdate, handleSetChildren } = useNodeOperations(

@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddDialog } from "./addDialog";
 import { EditDialog } from "./editDialog";

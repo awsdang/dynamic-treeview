@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { TreeNode } from "@/types/tree";
 import { api } from "@/services/api";
 
-export function useSearch(tree: TreeNode[]) {
+export function useSearch() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<TreeNode[]>([]);

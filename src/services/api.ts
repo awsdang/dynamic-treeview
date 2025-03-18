@@ -272,6 +272,7 @@ export const api = {
     }
 
     for (const [parentId, sections] of sectionsCache.entries()) {
+      parentId || "";
       const sectionIndex = sections.findIndex((s) => s.id === nodeId);
       if (sectionIndex >= 0) {
         node = sections[sectionIndex];
@@ -281,6 +282,7 @@ export const api = {
     }
 
     for (const [parentId, employees] of employeesCache.entries()) {
+      parentId || "";
       const employeeIndex = employees.findIndex((e) => e.id === nodeId);
       if (employeeIndex >= 0) {
         node = employees[employeeIndex];
@@ -492,6 +494,7 @@ export const api = {
     }
 
     for (const [parentId, sections] of sectionsCache.entries()) {
+      parentId || "";
       const sectionIndex = sections.findIndex((s) => s.id === nodeId);
       if (sectionIndex >= 0) {
         node = sections[sectionIndex];
@@ -501,6 +504,7 @@ export const api = {
     }
 
     for (const [parentId, employees] of employeesCache.entries()) {
+      parentId || "";
       const employeeIndex = employees.findIndex((e) => e.id === nodeId);
       if (employeeIndex >= 0) {
         node = employees[employeeIndex];
