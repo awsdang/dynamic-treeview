@@ -45,7 +45,7 @@ export function useDragAndDrop(
     }
 
     if (!validMove) {
-      console.error("Invalid move:", draggedNode.type, "to", destParentId);
+      // console.error("Invalid move:", draggedNode.type, "to", destParentId);
       return;
     }
 
@@ -69,7 +69,7 @@ export function useDragAndDrop(
         }
       }
     } catch (error) {
-      console.error("Drag sync failed:", error);
+      // console.error("Drag sync failed:", error);
     } finally {
       setIsSyncing(false);
     }

@@ -103,7 +103,7 @@ export default function Tree({
         className="group flex items-center py-1.5 cursor-pointer select-none hover:bg-accent/50"
         style={style}
       >
-        <div {...listeners} {...attributes} className="mr-2">
+        <div {...listeners} {...attributes} className="ml-2">
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
         <TreeNodeContent

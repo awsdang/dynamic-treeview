@@ -33,7 +33,7 @@ export function TreeChildren({
 
   return (
     <div
-      className="flex flex-col gap-2"
+      className="flex flex-col"
       style={{
         marginLeft: `${level + 1}rem`,
         minHeight: "20px",

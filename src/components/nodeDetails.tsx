@@ -4,6 +4,7 @@ import { Card, CardHeader, CardContent, CardDescription, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { TreeNode } from "../types/tree"
+import { useState, useEffect } from "react"
 
 function formatDate(date?: string) {
     if (!date) return '';
@@ -12,6 +13,22 @@ function formatDate(date?: string) {
 }
 
 export function NodeDetails({ node }: { node: TreeNode | null }) {
+    const [scrollDelta, setScrollDelta] = useState(0);
+    const height = `${scrollDelta}px`;
+    useEffect(() => {
+        let lastScrollY = window.scrollY;
+      
+        const handleScroll = () => {
+          const currentScrollY = window.scrollY;
+          const delta = currentScrollY - lastScrollY;
+          setScrollDelta(prev => (prev + delta) > 0 ? (prev + delta) : 0);
+          lastScrollY = currentScrollY;
+        };
+      
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+      }, []);
+
     if (!node) {
         return (
             <div className="p-4 h-full">
@@ -30,7 +47,9 @@ export function NodeDetails({ node }: { node: TreeNode | null }) {
     const formattedCreatedAt = formatDate(node.createdAt)
     const formattedlastUpdated = formatDate(node.lastUpdated)
     return (
-        <div className="p-4 ">
+        <>
+        <div style={{height:height}}></div>
+        <div className="p-4">
             <Card className="">
                 <CardHeader>
                     <div className="flex items-center justify-between">
@@ -53,15 +72,15 @@ export function NodeDetails({ node }: { node: TreeNode | null }) {
                             </span>
                         </div>
                         {node.parentId &&
-                        <>
-                       
-                            <Separator />
-                            
-                            <div>
-                                <h3 className="text-sm font-medium">Parent</h3>
-                                <p className="text-sm text-muted-foreground mt-1">ID: {node.parentId}</p>
-                            </div>
-                        </>
+                            <>
+
+                                <Separator />
+
+                                <div>
+                                    <h3 className="text-sm font-medium">Parent</h3>
+                                    <p className="text-sm text-muted-foreground mt-1">ID: {node.parentId}</p>
+                                </div>
+                            </>
                         }
                         <Separator />
                         <div>
@@ -85,32 +104,33 @@ export function NodeDetails({ node }: { node: TreeNode | null }) {
                                 </div>
                             </div>
                         </div>
-                        {node.details?.head && 
-                        <>
-                        <Separator />
+                        {node.details?.head &&
+                            <>
+                                <Separator />
 
-                        <div>
-                            <h3 className="text-sm font-medium">{node.type === 'department' ? "Department Head Info" :node.type === 'section' ? "Section Head Info" : "Employee Info"}</h3>
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                                <div className="bg-muted col-span-2 p-2 rounded-md">
-                                    <p className="text-xs font-medium">Full Name</p>
-                                    <p className="text-xs text-muted-foreground">{node.details?.head?.firstName} {node.details?.head?.lastName}</p>
+                                <div>
+                                    <h3 className="text-sm font-medium">{node.type === 'department' ? "Department Head Info" : node.type === 'section' ? "Section Head Info" : "Employee Info"}</h3>
+                                    <div className="grid grid-cols-2 gap-2 mt-2">
+                                        <div className="bg-muted col-span-2 p-2 rounded-md">
+                                            <p className="text-xs font-medium">Full Name</p>
+                                            <p className="text-xs text-muted-foreground">{node.details?.head?.firstName} {node.details?.head?.lastName}</p>
+                                        </div>
+                                        <div className="bg-muted p-2 rounded-md">
+                                            <p className="text-xs font-medium">Email</p>
+                                            <p className="text-xs text-muted-foreground">{node.details?.head?.email}</p>
+                                        </div>
+                                        <div className="bg-muted p-2 rounded-md">
+                                            <p className="text-xs font-medium">Phone</p>
+                                            <p className="text-xs text-muted-foreground">{node.details?.head?.phone}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="bg-muted p-2 rounded-md">
-                                    <p className="text-xs font-medium">Email</p>
-                                    <p className="text-xs text-muted-foreground">{node.details?.head?.email}</p>
-                                </div>
-                                <div className="bg-muted p-2 rounded-md">
-                                    <p className="text-xs font-medium">Phone</p>
-                                    <p className="text-xs text-muted-foreground">{node.details?.head?.phone}</p>
-                                </div>
-                            </div>
-                        </div>
-                        </>
+                            </>
                         }
                     </div>
                 </CardContent>
             </Card>
         </div>
+        </>
     )
 }
