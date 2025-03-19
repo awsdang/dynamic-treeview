@@ -11,6 +11,7 @@ import { SearchBar } from "@/components/searchBar";
 import Tree from "@/components/tree";
 import { NodeDetails } from "@/components/nodeDetails";
 import * as treeUtils from "@/lib/treeUtils";
+import Header from "./components/header";
 
 function App() {
   const {
@@ -58,17 +59,19 @@ function App() {
       setExpandedNodes(prev => new Set([...prev, ...parentsToExpand]));
     }
   }, [isSearching, searchResults, tree, setExpandedNodes]);
-
+  
   return (
-    <div className="min-h-screen bg-background p-8 max-w-6xl mx-auto">
+    <div className="min-h-screen bg-background  max-w-6xl mx-auto">
+      <Header isSyncing></Header>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Department Tree</h1>
+      
+        {/* <h1 className="text-3xl font-bold">Department Tree</h1>
         {isSyncing && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>Syncing...</span>
           </div>
-        )}
+        )} */}
       </div>
       <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <ResizablePanelGroup direction="horizontal" className="min-h-[80vh] border rounded-md">
