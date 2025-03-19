@@ -61,12 +61,11 @@ function App() {
   }, [isSearching, searchResults, tree, setExpandedNodes]);
   
   return (
-    <div className="min-h-screen bg-background  max-w-6xl mx-auto">
+    <div className="min-h-screen bg-background">
       <Header isSyncing={isSyncing}></Header>
-      <div className="flex items-center justify-between mb-6">
-      </div>
+
       <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <ResizablePanelGroup direction="horizontal" className="min-h-[80vh] border rounded-md">
+        <ResizablePanelGroup direction="horizontal" className="min-h-[80vh] border-l rounded-md max-w-7xl mx-auto">
           <ResizablePanel defaultSize={60}>
             <SearchBar
               searchQuery={searchQuery}
@@ -121,7 +120,7 @@ function App() {
               </div>
             )}
           </ResizablePanel>
-          <ResizableHandle withHandle className="" />
+          <ResizableHandle withHandle className="bg-gray-200" />
           <ResizablePanel defaultSize={40}>
             <NodeDetails node={selectedNode} />
           </ResizablePanel>
