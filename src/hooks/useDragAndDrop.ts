@@ -45,31 +45,37 @@ export function useDragAndDrop(
     }
 
     if (!validMove) {
-      // console.error("Invalid move:", draggedNode.type, "to", destParentId);
       return;
     }
 
-    setTree(treeUtils.moveNodeInTree(tree, draggedNodeId, destParentId));
+    let updatedTree = treeUtils.moveNodeInTree(tree, draggedNodeId, destParentId);
+    setTree(updatedTree);
     setIsSyncing(true);
+
     try {
       await api.moveNode(draggedNodeId, destParentId || "root");
+
       if (draggedNode.type === "department") {
         const rootNodes = await api.fetchRootNodes();
-        setTree(treeUtils.mergeTreeWithFetched(tree, rootNodes));
+        setTree(rootNodes); // Replace the entire tree
       } else {
+        let newTree = [...updatedTree];
+
         if (sourceParentId) {
           const oldParentWithChildren = await api.fetchNodesWithChildren(sourceParentId);
-          const updatedTree = treeUtils.updateChildrenById(tree, sourceParentId, oldParentWithChildren.children || []);
-          setTree(updatedTree);
+          newTree = treeUtils.updateChildrenById(newTree, sourceParentId, oldParentWithChildren.children || []);
         }
+
         if (destParentId) {
           const newParentWithChildren = await api.fetchNodesWithChildren(destParentId);
-          const updatedTree = treeUtils.updateChildrenById(tree, destParentId, newParentWithChildren.children || []);
-          setTree(updatedTree);
+          newTree = treeUtils.updateChildrenById(newTree, destParentId, newParentWithChildren.children || []);
         }
+
+        setTree(newTree);
       }
     } catch (error) {
-      // console.error("Drag sync failed:", error);
+      console.error("Drag sync failed:", error);
+      setTree(tree);
     } finally {
       setIsSyncing(false);
     }
