@@ -24,15 +24,15 @@ Here are some screenshots showcasing the application:
 
 1. **Main View**  
     The initial view of the tree structure with root-level departments.  
-    ![main](data/main.png)
+    ![main](images/main.png)
 
 2. **Expanded Tree**  
     A department with its sections and employees expanded. Lazy-loaded child nodes are displayed.  
-    ![tree-expanded](data/tree-expanded.png)
+    ![tree-expanded](images/tree-expanded.png)
 
 3. **Edit Dialog**  
     The dialog for editing a node's name and description.  
-    ![edit-dialog](data/edit-dialog.png)
+    ![edit-dialog](images/edit-dialog.png)
 
 
 ## Design Decisions
