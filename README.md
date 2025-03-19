@@ -37,6 +37,10 @@ Here are some screenshots showcasing the application:
 
 ## Design Decisions
 
+### Why No Design Responsive (supports Desktop only)?
+The tree view is inherently complex, requiring detailed interactions like drag-and-drop, lazy loading, and inline editing, which are best suited for desktop environments. Given the limited time available, the focus was on delivering a robust desktop experience rather than investing additional effort in making the design responsive.
+
+
 ### Why React?
 React simplifies building dynamic, interactive UIs with components. It fits perfectly for creating an intuitive tree view, especially when combined with efficient tools like @dnd-kit/core for drag-and-drop and lazy loading.
 
