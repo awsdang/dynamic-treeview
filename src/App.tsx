@@ -62,16 +62,8 @@ function App() {
   
   return (
     <div className="min-h-screen bg-background  max-w-6xl mx-auto">
-      <Header isSyncing></Header>
+      <Header isSyncing={isSyncing}></Header>
       <div className="flex items-center justify-between mb-6">
-      
-        {/* <h1 className="text-3xl font-bold">Department Tree</h1>
-        {isSyncing && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>Syncing...</span>
-          </div>
-        )} */}
       </div>
       <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <ResizablePanelGroup direction="horizontal" className="min-h-[80vh] border rounded-md">
