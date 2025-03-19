@@ -2,28 +2,6 @@
 
 This repository contains a **React + TypeScript** application that implements a **scalable, dynamic tree view** to handle large datasets (1000+ nodes). It demonstrates lazy-loading, searching, drag-and-drop reordering, and adding/editing nodes, all while maintaining performance and a clean architecture.
 
----
-
-## Table of Contents
-
-1. [Overview] 
-2. [Features] 
-3. [Project Structure] 
-4. [Key Components] 
-5. [Implementation Details] 
-    - [Lazy Loading] 
-    - [Searching] 
-    - [Drag-and-Drop] 
-    - [Reordering] 
-    - [Add & Edit Nodes] 
-6. [How to Run] 
-7. [Usage] 
-8. [Commit History] 
-9. [Possible Improvements] 
-10. [License] 
-
----
-
 ## Overview
 
 The goal of this project is to showcase a **high-performance, interactive tree view** that can handle large datasets (e.g., thousands of departments and sections). The application:
@@ -35,6 +13,83 @@ The goal of this project is to showcase a **high-performance, interactive tree v
 - Supports **adding** and **editing** nodes (departments, sections, employees) on the fly.
 
 ---
+
+## DEMO
+the Scalable Dynamic Tree View application:
+[Live Demo](https://dynamic-treeview.vercel.app)
+
+## Screenshots
+
+Here are some screenshots showcasing the application:
+
+1. **Main View**  
+    The initial view of the tree structure with root-level departments.  
+    ![main](data/main.png)
+
+2. **Expanded Tree**  
+    A department with its sections and employees expanded. Lazy-loaded child nodes are displayed.  
+    ![tree-expanded](data/tree-expanded.png)
+
+3. **Edit Dialog**  
+    The dialog for editing a node's name and description.  
+    ![edit-dialog](data/edit-dialog.png)
+
+
+## Design Decisions
+
+### Why React?
+React simplifies building dynamic, interactive UIs with components. It fits perfectly for creating an intuitive tree view, especially when combined with efficient tools like @dnd-kit/core for drag-and-drop and lazy loading.
+
+### Why This Approach?
+Lazy loading, drag-and-drop, and search keep the UI fast and responsive, especially with large datasets. These features improve usability by loading only what's needed, making interactions smooth and intuitive.
+
+### Why ShadCN?
+ShadCN offers clean, customizable UI components that integrate seamlessly with Tailwind CSS. It accelerated development, letting the team prioritize functionality over styling.
+
+### AI-Generated API
+An AI-generated mock API (api.ts) simulated backend operations, allowing front-end development to proceed smoothly without backend dependencies.
+
+### Workflow
+1. **Component-Based Development**: The application was built using a modular approach, with each feature encapsulated in its own component (e.g., `Tree`, `NodeDetails`, `dialogs`).
+2. **Mock API Integration**: The AI-generated API was integrated early in the development process to simulate real-world data interactions.
+3. **Iterative Refinement**: Features like drag-and-drop and lazy loading were implemented incrementally, with continuous testing and optimization.
+4. **UI/UX Enhancements**: ShadCN components were customized to align with the application's design goals, ensuring a polished and user-friendly interface.
+5. **Performance Optimization**: Techniques like virtualized rendering and caching were considered to handle large datasets efficiently.
+
+This combination of tools, methodologies, and design decisions resulted in a robust, scalable, and user-centric application.
+
+
+## Future Enhancements
+
+### 1. **Roadmap (Arabic Version with i18n Support)**
+
+    - Implement **multi-language support** using libraries like `react-i18next` or `next-i18next`.
+    - Add an **Arabic translation** for all UI elements, including labels, buttons, and dialogs.
+    - Ensure **RTL (Right-to-Left)** layout compatibility for Arabic users.
+    - Provide a **language toggle** option in the header or settings.
+
+### 2. **Improved Error Handling**
+
+    - Add **global error boundaries** to catch unexpected errors and display user-friendly messages.
+    - Implement **retry mechanisms** for API calls in case of network failures.
+    - Show **toast notifications** for errors like failed node creation, editing, or reordering.
+    - Log errors to a **monitoring service** (e.g., Sentry) for better debugging.
+
+### 3. **Additional Features**
+
+    - **Export/Import Tree Data**: Allow users to export the tree structure as JSON and re-import it later.
+    - **Custom Node Icons**: Enable users to assign custom icons to nodes based on their type.
+    - **Access Control**: Add role-based permissions to restrict who can edit or move nodes.
+    - **Dark Mode**: Provide a toggle for light/dark themes to enhance usability.
+    - **Undo/Redo Actions**: Allow users to revert or reapply changes made to the tree structure.
+
+### 4. **Performance Optimizations**
+
+    - Use **virtualized rendering** for large trees to improve scrolling performance.
+    - Optimize **drag-and-drop** interactions for smoother animations.
+    - Cache API responses to reduce redundant network calls.
+
+
 
 ## Features
 
